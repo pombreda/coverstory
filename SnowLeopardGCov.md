@@ -1,0 +1,39 @@
+This page is deprecated and no longer being maintained.
+
+# Introduction #
+
+  * Code coverage doesn't work well when building on Snow Leopard using Xcode 3.2.2 with gcc 4.2.1, but you can get it working. [Radar 8049256](http://openradar.appspot.com/radar?id=389401) "gcov broken on gcc 4.2.1 (Xcode 3.2.2) with inlines in precompiled headers"
+
+# General Snow Leopard gcov Issue #
+
+There appears to be a bug in gcc 4.2.1 that causes gcov to produce bogus data if you have ANY inlines in your prefix header file. The "easiest" way to get around this for code coverage builds is to turn off prefix headers, by setting the "Prefix Header" (GCC\_PREFIX\_HEADER) setting in your project/target to "blank". It doesn't seem to matter if the prefix header is precompiled or not. This may be quite a pain depending on how much your source depends on your prefix header to actually compile, and it may result in slower compiles.
+
+The other fix for this is to use gcc 4.0 instead of 4.2.1. Note that unless you go with gcc 4.0 for all of your configurations that you will end up running different code in your code-coverage builds vs your non-code-coverage builds. Also, you may not be able to use things like blocks. If you choose to use gcc 4.0, you may see a link error:
+
+```
+Undefined symbols:
+  "_fdopen$UNIX2003", referenced from:
+      ___gcov_open in libgcov.a(_gcov.o)
+ld: symbol(s) not found
+collect2: ld returned 1 exit status
+```
+
+This can be fixed by adding this chunk of code:
+
+```
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+FILE *fdopen$UNIX2003(int fildes, const char *mode) {
+  return fdopen(fildes, mode);
+}
+
+#ifdef __cplusplus
+}
+#endif
+
+```
+
+or you can grab our version http://code.google.com/p/coverstory/source/browse/trunk/SnowLeopardGcov/CoverStory_fdopen2003.c.
